@@ -1,7 +1,9 @@
 const MODULE_NAME = 'role_outfit_library';
 const RULE_TEXT = '换肤槽位：甲乙只对应当前剧情中已有角色。皮肤名与英文tag仅用于对应角色的image###外观，正文始终使用原姓名，不新增人物，不改变身份、性格和关系。';
-const REMEMBER_KEY = 'role_outfit_library_unlock_v1';
 const AAD_TEXT = 'role-outfit-library:v1';
+// The repository remains free of plaintext library data. This bundled key only
+// avoids a password prompt; it is obfuscation, not access control.
+const BUNDLED_LIBRARY_KEY = ['rJ-E9', '-4Fxer', '-JIbgP', '-xgJ8Y'].join('');
 
 let characters = [];
 let outfits = [];
@@ -57,64 +59,22 @@ async function decryptLibrary(password) {
     return parsed;
 }
 
-function setLockedUi(locked) {
-    const lockPanel = document.querySelector('#rolib-lock-panel');
-    const libraryPanel = document.querySelector('#rolib-library-panel');
-    if (lockPanel) lockPanel.hidden = !locked;
-    if (libraryPanel) libraryPanel.hidden = locked;
-}
-
-async function unlockLibrary(password, remember = false, silent = false) {
-    const errorBox = document.querySelector('#rolib-unlock-error');
-    const unlockButton = document.querySelector('#rolib-unlock');
-    if (errorBox) errorBox.textContent = '';
-    if (!password) {
-        if (errorBox) errorBox.textContent = '请输入解锁密码';
-        return false;
-    }
-    if (unlockButton) {
-        unlockButton.disabled = true;
-        unlockButton.textContent = '正在解锁…';
-    }
+async function loadBundledLibrary() {
     try {
-        const data = await decryptLibrary(password);
+        const data = await decryptLibrary(BUNDLED_LIBRARY_KEY);
         characters = data.characters;
         outfits = data.outfits;
-        if (remember) localStorage.setItem(REMEMBER_KEY, password);
-        else localStorage.removeItem(REMEMBER_KEY);
-        setLockedUi(false);
         renderWorks();
         renderCharacters();
         renderOutfitGroups();
         renderOutfits();
         await renderStatus();
-        if (!silent) toastr.success(`已解锁 ${characters.length} 个角色、${outfits.length} 套服装`);
         return true;
     } catch (error) {
-        localStorage.removeItem(REMEMBER_KEY);
-        if (errorBox) errorBox.textContent = error.message.includes('安全解密') ? error.message : '密码不正确，或加密数据已损坏';
-        if (!silent) toastr.error('角色换肤库解锁失败');
+        console.error(`[${MODULE_NAME}] 角色库读取失败`, error);
+        toastr.error('角色换肤库读取失败，请重新安装或更新扩展');
         return false;
-    } finally {
-        if (unlockButton) {
-            unlockButton.disabled = false;
-            unlockButton.textContent = '解锁角色换肤库';
-        }
     }
-}
-
-function lockLibrary() {
-    characters = [];
-    outfits = [];
-    activeWork = '';
-    activeOutfitGroup = '';
-    localStorage.removeItem(REMEMBER_KEY);
-    const input = document.querySelector('#rolib-password');
-    const remember = document.querySelector('#rolib-remember');
-    if (input) input.value = '';
-    if (remember) remember.checked = false;
-    setLockedUi(true);
-    toastr.info('角色换肤库已锁定');
 }
 
 async function run(command) {
@@ -266,13 +226,6 @@ function randomFrom(list) {
 }
 
 function bindUi() {
-    const passwordInput = document.querySelector('#rolib-password');
-    const unlock = () => unlockLibrary(passwordInput?.value || '', document.querySelector('#rolib-remember')?.checked || false);
-    document.querySelector('#rolib-unlock')?.addEventListener('click', unlock);
-    passwordInput?.addEventListener('keydown', event => {
-        if (event.key === 'Enter') unlock();
-    });
-    document.querySelector('#rolib-lock')?.addEventListener('click', lockLibrary);
     document.querySelectorAll('[data-slot]').forEach(btn => btn.addEventListener('click', async () => {
         activeSlot = btn.dataset.slot;
         document.querySelectorAll('[data-slot]').forEach(x => x.classList.toggle('active', x.dataset.slot === activeSlot));
@@ -319,8 +272,8 @@ function createQuickLauncher() {
         button.className = 'menu_button fa-solid fa-shirt interactable';
         button.title = '打开角色换肤库';
         button.setAttribute('aria-label', '打开角色换肤库');
-        button.addEventListener('click', openLibraryPopup);
     }
+    button.onclick = toggleLibraryPopup;
 
     const sendButton = document.querySelector('#send_but');
     const target = document.querySelector('#send_form') || sendButton?.parentElement;
@@ -335,12 +288,32 @@ function createQuickLauncher() {
         floating = document.createElement('button');
         floating.id = 'rolib-floating-launcher';
         floating.type = 'button';
-        floating.className = 'fa-solid fa-shirt interactable';
+        floating.className = 'rolib-floating-button';
         floating.title = '角色换肤库';
         floating.setAttribute('aria-label', '打开角色换肤库');
-        floating.addEventListener('click', openLibraryPopup);
+        floating.innerHTML = '<span aria-hidden="true">衣</span>';
         document.body.appendChild(floating);
     }
+    floating.onclick = toggleLibraryPopup;
+    syncFloatingLauncher();
+}
+
+function toggleLibraryPopup() {
+    if (popupRoot && !popupRoot.isConnected) popupRoot = null;
+    if (popupRoot) closeLibraryPopup();
+    else openLibraryPopup();
+}
+
+function syncFloatingLauncher() {
+    const floating = document.querySelector('#rolib-floating-launcher');
+    if (!floating) return;
+    const open = Boolean(popupRoot);
+    const label = open ? '关闭角色换肤库' : '打开角色换肤库';
+    const glyph = open ? '×' : '衣';
+    floating.classList.toggle('is-open', open);
+    floating.title = label;
+    floating.setAttribute('aria-label', label);
+    if (floating.textContent !== glyph) floating.innerHTML = `<span aria-hidden="true">${glyph}</span>`;
 }
 
 function keepLaunchersAlive() {
@@ -372,6 +345,7 @@ async function openLibraryPopup() {
     document.body.appendChild(shell);
     document.body.classList.add('rolib-popup-open');
     popupRoot = shell;
+    syncFloatingLauncher();
     const content = source.querySelector('.inline-drawer-content');
     shell.querySelector('.rolib-popup-mount').appendChild(content);
     content.style.display = 'block';
@@ -388,6 +362,7 @@ function closeLibraryPopup() {
     popupRoot.remove();
     popupRoot = null;
     document.body.classList.remove('rolib-popup-open');
+    syncFloatingLauncher();
 }
 
 async function init() {
@@ -401,19 +376,13 @@ async function init() {
         const html = await context.renderExtensionTemplateAsync('third-party/role-outfit-library', 'settings');
         document.querySelector('#extensions_settings2')?.insertAdjacentHTML('beforeend', html);
         bindUi();
-        setLockedUi(true);
         keepLaunchersAlive();
+        await loadBundledLibrary();
         const { eventSource, event_types } = context;
         if (eventSource && event_types?.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, renderStatus);
         }
-        const remembered = localStorage.getItem(REMEMBER_KEY);
-        if (remembered) {
-            const rememberBox = document.querySelector('#rolib-remember');
-            if (rememberBox) rememberBox.checked = true;
-            await unlockLibrary(remembered, true, true);
-        }
-        console.log(`[${MODULE_NAME}] 加密角色换肤库已加载`);
+        console.log(`[${MODULE_NAME}] 角色换肤库已加载`);
     } catch (error) {
         console.error(`[${MODULE_NAME}] 初始化失败`, error);
         toastr.error(`角色换肤库加载失败：${error.message}`);
