@@ -1,4 +1,7 @@
 .rolib-root { margin-top: 8px; }
+.rolib-drawer-toggle { cursor: pointer; user-select: none; touch-action: manipulation; }
+.rolib-drawer-icon { transition: transform 160ms ease; }
+.rolib-drawer-toggle.is-open .rolib-drawer-icon { transform: rotate(180deg); }
 .rolib-lock-panel { display: grid; gap: 10px; justify-items: stretch; max-width: 460px; margin: 12px auto; padding: 18px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 12px; text-align: center; }
 .rolib-lock-panel[hidden], #rolib-library-panel[hidden] { display: none !important; }
 .rolib-lock-icon { font-size: 2rem; opacity: .85; }
@@ -68,4 +71,4 @@
   .rolib-footer .menu_button { width: 100% !important; min-width: 0 !important; min-height: 36px; padding: 4px 8px !important; white-space: nowrap; }
   .rolib-note { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .rolib-item:active, #rolib-floating-launcher:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rolib-item:active, #rolib-floating-launcher:active { transform: none; } .rolib-drawer-icon { transition: none; } }

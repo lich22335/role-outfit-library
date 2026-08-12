@@ -13,6 +13,7 @@ let activeWork = '';
 let activeOutfitGroup = '';
 let popupRoot = null;
 let launcherObserver = null;
+let drawerExpanded = false;
 
 function esc(value = '') {
     return String(value).replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
@@ -226,6 +227,19 @@ function randomFrom(list) {
 }
 
 function bindUi() {
+    const drawerToggle = document.querySelector('#rolib-drawer-toggle');
+    const toggleDrawer = event => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        setDrawerExpanded(!drawerExpanded);
+    };
+    if (drawerToggle) {
+        drawerToggle.onclick = toggleDrawer;
+        drawerToggle.onkeydown = event => {
+            if (event.key === 'Enter' || event.key === ' ') toggleDrawer(event);
+        };
+    }
+    setDrawerExpanded(false);
     document.querySelectorAll('[data-slot]').forEach(btn => btn.addEventListener('click', async () => {
         activeSlot = btn.dataset.slot;
         document.querySelectorAll('[data-slot]').forEach(x => x.classList.toggle('active', x.dataset.slot === activeSlot));
@@ -261,6 +275,18 @@ function bindUi() {
     document.querySelector('#rolib-clear-current')?.addEventListener('click', clearCurrent);
     document.querySelector('#rolib-clear-all')?.addEventListener('click', clearAll);
     document.querySelector('#rolib-refresh-input')?.addEventListener('click', updateInput);
+}
+
+function setDrawerExpanded(expanded) {
+    drawerExpanded = Boolean(expanded);
+    const toggle = document.querySelector('#rolib-drawer-toggle');
+    const content = document.querySelector('#rolib-root .inline-drawer-content');
+    toggle?.classList.toggle('is-open', drawerExpanded);
+    toggle?.setAttribute('aria-expanded', String(drawerExpanded));
+    if (content && !popupRoot?.contains(content)) {
+        content.hidden = !drawerExpanded;
+        content.style.display = drawerExpanded ? 'block' : 'none';
+    }
 }
 
 function createQuickLauncher() {
@@ -348,6 +374,7 @@ async function openLibraryPopup() {
     syncFloatingLauncher();
     const content = source.querySelector('.inline-drawer-content');
     shell.querySelector('.rolib-popup-mount').appendChild(content);
+    content.hidden = false;
     content.style.display = 'block';
     shell.querySelector('.rolib-popup-close').addEventListener('click', closeLibraryPopup);
     shell.addEventListener('click', event => { if (event.target === shell) closeLibraryPopup(); });
@@ -358,7 +385,11 @@ function closeLibraryPopup() {
     if (!popupRoot) return;
     const content = popupRoot.querySelector('.inline-drawer-content');
     const drawer = document.querySelector('#rolib-root .inline-drawer');
-    if (content && drawer) drawer.appendChild(content);
+    if (content && drawer) {
+        drawer.appendChild(content);
+        content.hidden = !drawerExpanded;
+        content.style.display = drawerExpanded ? 'block' : 'none';
+    }
     popupRoot.remove();
     popupRoot = null;
     document.body.classList.remove('rolib-popup-open');
