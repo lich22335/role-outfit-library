@@ -1,0 +1,5 @@
+# The plaintext source and password must never be committed.
+characters.json
+outfits.json
+*password*
+*密码*
