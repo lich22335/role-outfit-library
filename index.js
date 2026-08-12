@@ -208,13 +208,21 @@ function renderWorks(filter = '') {
     if (!target) return;
     const text = filter.trim().toLowerCase();
     const works = [...new Set(characters.filter(x => !text || x.work.toLowerCase().includes(text) || x.name.toLowerCase().includes(text)).map(x => x.work))];
+    if (works.length && !works.includes(activeWork)) activeWork = works[0];
     target.innerHTML = works.map(work => `<button class="menu_button rolib-chip${work === activeWork ? ' active' : ''}" data-work="${esc(work)}">${esc(work)}</button>`).join('');
     target.querySelectorAll('[data-work]').forEach(btn => btn.addEventListener('click', () => {
         activeWork = btn.dataset.work;
+        const select = document.querySelector('#rolib-work-select');
+        if (select) select.value = activeWork;
         renderWorks(document.querySelector('#rolib-character-search')?.value || '');
         renderCharacters();
     }));
-    if (!activeWork && works.length) activeWork = works[0];
+    const select = document.querySelector('#rolib-work-select');
+    if (select) {
+        const allWorks = [...new Set(characters.map(x => x.work))];
+        select.innerHTML = allWorks.map(work => `<option value="${esc(work)}">${esc(work)}</option>`).join('');
+        if (allWorks.includes(activeWork)) select.value = activeWork;
+    }
 }
 
 function renderCharacters() {
@@ -232,6 +240,11 @@ function renderOutfitGroups() {
     const groups = [...new Set(outfits.map(x => x.group))];
     if (!activeOutfitGroup && groups.length) activeOutfitGroup = groups[0];
     target.innerHTML = groups.map(group => `<button class="menu_button rolib-chip${group === activeOutfitGroup ? ' active' : ''}" data-outfit-group="${esc(group)}">${esc(group)}</button>`).join('');
+    const select = document.querySelector('#rolib-outfit-group-select');
+    if (select) {
+        select.innerHTML = groups.map(group => `<option value="${esc(group)}">${esc(group)}</option>`).join('');
+        select.value = activeOutfitGroup;
+    }
     target.querySelectorAll('[data-outfit-group]').forEach(btn => btn.addEventListener('click', () => {
         activeOutfitGroup = btn.dataset.outfitGroup;
         renderOutfitGroups();
@@ -274,6 +287,16 @@ function bindUi() {
         renderCharacters();
     });
     document.querySelector('#rolib-outfit-search')?.addEventListener('input', renderOutfits);
+    document.querySelector('#rolib-work-select')?.addEventListener('change', event => {
+        activeWork = event.target.value;
+        renderWorks(document.querySelector('#rolib-character-search')?.value || '');
+        renderCharacters();
+    });
+    document.querySelector('#rolib-outfit-group-select')?.addEventListener('change', event => {
+        activeOutfitGroup = event.target.value;
+        renderOutfitGroups();
+        renderOutfits();
+    });
     document.querySelector('#rolib-random-character')?.addEventListener('click', () => {
         const pool = characters.filter(x => !activeWork || x.work === activeWork);
         if (pool.length) chooseCharacter(randomFrom(pool));
@@ -336,6 +359,7 @@ function keepLaunchersAlive() {
 }
 
 async function openLibraryPopup() {
+    if (popupRoot) return;
     const source = document.querySelector('#rolib-root');
     if (!source) return;
     const shell = document.createElement('div');
@@ -346,6 +370,7 @@ async function openLibraryPopup() {
         <div class="rolib-popup-mount"></div>
       </div>`;
     document.body.appendChild(shell);
+    document.body.classList.add('rolib-popup-open');
     popupRoot = shell;
     const content = source.querySelector('.inline-drawer-content');
     shell.querySelector('.rolib-popup-mount').appendChild(content);
@@ -362,6 +387,7 @@ function closeLibraryPopup() {
     if (content && drawer) drawer.appendChild(content);
     popupRoot.remove();
     popupRoot = null;
+    document.body.classList.remove('rolib-popup-open');
 }
 
 async function init() {
