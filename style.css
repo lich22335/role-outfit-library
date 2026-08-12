@@ -31,6 +31,9 @@
 #rolib-floating-launcher.is-open { background: var(--SmartThemeQuoteColor, #b38a54); color: #fff; }
 #rolib-floating-launcher:active { transform: scale(.94); }
 .rolib-popup-shell { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(0,0,0,.58); backdrop-filter: blur(3px); }
+dialog.rolib-popup-shell { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; box-sizing: border-box; color: inherit; }
+dialog.rolib-popup-shell:not([open]) { display: none; }
+dialog.rolib-popup-shell::backdrop { background: rgba(0,0,0,.58); backdrop-filter: blur(3px); }
 .rolib-popup-card { width: min(920px, 96vw); max-height: 92vh; overflow: hidden; padding: 12px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 12px; background: var(--SmartThemeBlurTintColor, rgba(30,30,30,.96)); box-shadow: 0 18px 70px rgba(0,0,0,.45); }
 .rolib-popup-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 1.08em; }
 .rolib-popup-mount { max-height: calc(92vh - 62px); overflow: auto; }
@@ -39,6 +42,7 @@
 @media (max-width: 600px), (pointer: coarse) {
   body.rolib-popup-open { overflow: hidden; }
   .rolib-popup-shell { align-items: flex-end; padding: 0; background: rgba(0,0,0,.48); }
+  dialog.rolib-popup-shell { width: 100vw; height: 100dvh; max-width: none; max-height: none; }
   .rolib-popup-card { width: 100vw; height: auto; max-height: 84dvh; padding: 0; border-width: 1px 0 0; border-radius: 16px 16px 0 0; background: var(--SmartThemeBlurTintColor, rgba(28,28,30,.98)); box-shadow: 0 -16px 50px rgba(0,0,0,.38); overflow: hidden; }
   .rolib-popup-head { position: sticky; top: 0; z-index: 8; min-height: 46px; margin: 0; padding: 6px 58px 6px 10px; border-bottom: 1px solid var(--SmartThemeBorderColor); background: var(--SmartThemeBlurTintColor, rgba(28,28,30,.98)); backdrop-filter: blur(20px) saturate(160%); }
   .rolib-popup-head::before { content: ''; position: absolute; top: 5px; left: 50%; width: 36px; height: 4px; border-radius: 999px; background: currentColor; opacity: .22; transform: translateX(-50%); }

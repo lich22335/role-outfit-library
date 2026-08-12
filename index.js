@@ -375,10 +375,15 @@ function keepLaunchersAlive() {
 }
 
 async function openLibraryPopup() {
+    if (popupRoot && !popupRoot.isConnected) popupRoot = null;
     if (popupRoot) return;
     const source = document.querySelector('#rolib-root');
-    if (!source) return;
-    const shell = document.createElement('div');
+    const content = source?.querySelector('.inline-drawer-content');
+    if (!source || !content) {
+        toastr.error('角色选择页尚未加载，请刷新酒馆后重试');
+        return;
+    }
+    const shell = document.createElement('dialog');
     shell.className = 'rolib-popup-shell';
     shell.innerHTML = `
       <div class="rolib-popup-card">
@@ -388,25 +393,39 @@ async function openLibraryPopup() {
     document.body.appendChild(shell);
     document.body.classList.add('rolib-popup-open');
     popupRoot = shell;
-    syncFloatingLauncher();
-    const content = source.querySelector('.inline-drawer-content');
+    const floating = document.querySelector('#rolib-floating-launcher');
+    if (floating) shell.appendChild(floating);
     shell.querySelector('.rolib-popup-mount').appendChild(content);
     content.hidden = false;
     content.style.display = 'block';
     shell.querySelector('.rolib-popup-close').addEventListener('click', closeLibraryPopup);
     shell.addEventListener('click', event => { if (event.target === shell) closeLibraryPopup(); });
+    shell.addEventListener('cancel', event => {
+        event.preventDefault();
+        closeLibraryPopup();
+    });
+    try {
+        shell.showModal();
+    } catch (error) {
+        console.warn(`[${MODULE_NAME}] 原生模态层不可用，使用兼容模式`, error);
+        shell.setAttribute('open', '');
+    }
+    syncFloatingLauncher();
     await renderStatus();
 }
 
 function closeLibraryPopup() {
     if (!popupRoot) return;
     const content = popupRoot.querySelector('.inline-drawer-content');
+    const floating = popupRoot.querySelector('#rolib-floating-launcher');
     const drawer = document.querySelector('#rolib-root .inline-drawer');
     if (content && drawer) {
         drawer.appendChild(content);
         content.hidden = !drawerExpanded;
         content.style.display = drawerExpanded ? 'block' : 'none';
     }
+    if (floating) document.body.appendChild(floating);
+    if (typeof popupRoot.close === 'function' && popupRoot.open) popupRoot.close();
     popupRoot.remove();
     popupRoot = null;
     document.body.classList.remove('rolib-popup-open');
