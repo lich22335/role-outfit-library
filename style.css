@@ -21,9 +21,12 @@
 .rolib-empty { opacity: .7; padding: 14px; }
 @media (max-width: 600px) { .rolib-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 52vh; } }
 #rolib-launcher { min-width: 36px; align-self: center; }
+#rolib-floating-launcher { display: none; position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 9999; width: 48px; height: 48px; padding: 0; border: 1px solid var(--SmartThemeBorderColor); border-radius: 50%; color: var(--SmartThemeBodyColor); background: var(--SmartThemeBlurTintColor, rgba(35,35,35,.94)); box-shadow: 0 5px 22px rgba(0,0,0,.4); font-size: 19px; align-items: center; justify-content: center; touch-action: manipulation; }
+#rolib-floating-launcher:active { transform: scale(.94); }
 .rolib-popup-shell { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(0,0,0,.58); backdrop-filter: blur(3px); }
 .rolib-popup-card { width: min(920px, 96vw); max-height: 92vh; overflow: hidden; padding: 12px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 12px; background: var(--SmartThemeBlurTintColor, rgba(30,30,30,.96)); box-shadow: 0 18px 70px rgba(0,0,0,.45); }
 .rolib-popup-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 1.08em; }
 .rolib-popup-mount { max-height: calc(92vh - 62px); overflow: auto; }
 .rolib-popup-mount .rolib-grid { max-height: 55vh; }
+@media (max-width: 600px), (pointer: coarse) { #rolib-floating-launcher { display: flex; } }
 @media (max-width: 600px) { .rolib-popup-shell { padding: 4px; } .rolib-popup-card { width: 99vw; max-height: 97vh; border-radius: 8px; } .rolib-popup-mount { max-height: calc(97vh - 56px); } }

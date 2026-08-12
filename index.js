@@ -10,6 +10,7 @@ let activeSlot = 'A';
 let activeWork = '';
 let activeOutfitGroup = '';
 let popupRoot = null;
+let launcherObserver = null;
 
 function esc(value = '') {
     return String(value).replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
@@ -287,22 +288,51 @@ function bindUi() {
 }
 
 function createQuickLauncher() {
-    if (document.querySelector('#rolib-launcher')) return;
-    const button = document.createElement('button');
-    button.id = 'rolib-launcher';
-    button.type = 'button';
-    button.className = 'menu_button fa-solid fa-shirt interactable';
-    button.title = '打开角色换肤库';
-    button.setAttribute('aria-label', '打开角色换肤库');
-    button.addEventListener('click', openLibraryPopup);
+    let button = document.querySelector('#rolib-launcher');
+    if (!button) {
+        button = document.createElement('button');
+        button.id = 'rolib-launcher';
+        button.type = 'button';
+        button.className = 'menu_button fa-solid fa-shirt interactable';
+        button.title = '打开角色换肤库';
+        button.setAttribute('aria-label', '打开角色换肤库');
+        button.addEventListener('click', openLibraryPopup);
+    }
 
     const sendButton = document.querySelector('#send_but');
     const target = document.querySelector('#send_form') || sendButton?.parentElement;
-    if (sendButton?.parentElement) {
+    if (!button.isConnected && sendButton?.parentElement) {
         sendButton.parentElement.insertBefore(button, sendButton);
-    } else if (target) {
+    } else if (!button.isConnected && target) {
         target.appendChild(button);
     }
+
+    let floating = document.querySelector('#rolib-floating-launcher');
+    if (!floating) {
+        floating = document.createElement('button');
+        floating.id = 'rolib-floating-launcher';
+        floating.type = 'button';
+        floating.className = 'fa-solid fa-shirt interactable';
+        floating.title = '角色换肤库';
+        floating.setAttribute('aria-label', '打开角色换肤库');
+        floating.addEventListener('click', openLibraryPopup);
+        document.body.appendChild(floating);
+    }
+}
+
+function keepLaunchersAlive() {
+    createQuickLauncher();
+    if (launcherObserver) return;
+    let scheduled = false;
+    launcherObserver = new MutationObserver(() => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+            scheduled = false;
+            createQuickLauncher();
+        });
+    });
+    launcherObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 async function openLibraryPopup() {
@@ -346,7 +376,7 @@ async function init() {
         document.querySelector('#extensions_settings2')?.insertAdjacentHTML('beforeend', html);
         bindUi();
         setLockedUi(true);
-        createQuickLauncher();
+        keepLaunchersAlive();
         const { eventSource, event_types } = context;
         if (eventSource && event_types?.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, renderStatus);
