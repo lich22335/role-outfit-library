@@ -14,6 +14,7 @@ let activeOutfitGroup = '';
 let popupRoot = null;
 let launcherObserver = null;
 let drawerExpanded = false;
+let launcherEventsBound = false;
 
 function esc(value = '') {
     return String(value).replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
@@ -295,11 +296,11 @@ function createQuickLauncher() {
         button = document.createElement('button');
         button.id = 'rolib-launcher';
         button.type = 'button';
-        button.className = 'menu_button fa-solid fa-shirt interactable';
+        button.className = 'menu_button rolib-chat-launcher interactable';
         button.title = '打开角色换肤库';
         button.setAttribute('aria-label', '打开角色换肤库');
+        button.innerHTML = '<span aria-hidden="true">衣</span>';
     }
-    button.onclick = toggleLibraryPopup;
 
     const sendButton = document.querySelector('#send_but');
     const target = document.querySelector('#send_form') || sendButton?.parentElement;
@@ -320,8 +321,23 @@ function createQuickLauncher() {
         floating.innerHTML = '<span aria-hidden="true">衣</span>';
         document.body.appendChild(floating);
     }
-    floating.onclick = toggleLibraryPopup;
     syncFloatingLauncher();
+}
+
+function findLauncher(event) {
+    return event.composedPath?.().find(node => node?.id === 'rolib-launcher' || node?.id === 'rolib-floating-launcher') || null;
+}
+
+function bindLauncherEvents() {
+    if (launcherEventsBound) return;
+    launcherEventsBound = true;
+    document.addEventListener('click', event => {
+        if (!findLauncher(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        toggleLibraryPopup();
+    }, true);
 }
 
 function toggleLibraryPopup() {
@@ -343,6 +359,7 @@ function syncFloatingLauncher() {
 }
 
 function keepLaunchersAlive() {
+    bindLauncherEvents();
     createQuickLauncher();
     if (launcherObserver) return;
     let scheduled = false;
