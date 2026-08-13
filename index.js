@@ -1,5 +1,5 @@
 const MODULE_NAME = 'role_outfit_library';
-const RULE_TEXT = '换肤槽位：甲乙只对应当前剧情中已有角色。角色名、作品名与英文tag仅用于对应角色的image###外观，正文始终使用原姓名，不新增人物，不改变身份、性格和关系。';
+const RULE_TEXT = '换肤槽位：甲乙只对应当前剧情中已有角色。NAI英文角色tag仅用于对应角色的image###外观；作品消歧只在该角色正式tag本身需要时保留。正文始终使用原姓名，不新增人物，不改变身份、性格和关系。';
 const AAD_TEXT = 'role-outfit-library:v1';
 // The repository remains free of plaintext library data. This bundled key only
 // avoids a password prompt; it is obfuscation, not access control.
@@ -107,6 +107,17 @@ async function flushVar(key) {
     await run(`/flushvar ${key}`);
 }
 
+async function migrateLegacyRoleValues() {
+    for (const key of ['role_a', 'role_b']) {
+        const current = await getVar(key);
+        const marker = current.lastIndexOf('】');
+        if (current.startsWith('【') && marker >= 0) {
+            const tag = current.slice(marker + 1).trim();
+            if (tag) await setVar(key, tag);
+        }
+    }
+}
+
 function slotKey(kind, slot = activeSlot) {
     return `${kind}_${slot.toLowerCase()}`;
 }
@@ -133,7 +144,7 @@ async function updateInput() {
 }
 
 async function chooseCharacter(item) {
-    const value = `【${item.name}｜${item.work}】${item.tag}`;
+    const value = item.tag;
     await setVar(slotKey('role'), value);
     await updateInput();
     toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}（${item.work}）`);
@@ -445,6 +456,8 @@ async function init() {
         bindUi();
         keepLaunchersAlive();
         await loadBundledLibrary();
+        await migrateLegacyRoleValues();
+        await renderStatus();
         const { eventSource, event_types } = context;
         if (eventSource && event_types?.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, renderStatus);
