@@ -1,5 +1,5 @@
 const MODULE_NAME = 'role_outfit_library';
-const RULE_TEXT = '换肤槽位：甲乙只对应当前剧情中已有角色。皮肤名与英文tag仅用于对应角色的image###外观，正文始终使用原姓名，不新增人物，不改变身份、性格和关系。';
+const RULE_TEXT = '换肤槽位：甲乙只对应当前剧情中已有角色。角色名、作品名与英文tag仅用于对应角色的image###外观，正文始终使用原姓名，不新增人物，不改变身份、性格和关系。';
 const AAD_TEXT = 'role-outfit-library:v1';
 // The repository remains free of plaintext library data. This bundled key only
 // avoids a password prompt; it is obfuscation, not access control.
@@ -133,10 +133,10 @@ async function updateInput() {
 }
 
 async function chooseCharacter(item) {
-    const value = `【${item.name}】${item.tag}`;
+    const value = `【${item.name}｜${item.work}】${item.tag}`;
     await setVar(slotKey('role'), value);
     await updateInput();
-    toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}`);
+    toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}（${item.work}）`);
 }
 
 async function chooseOutfit(item) {
@@ -192,7 +192,7 @@ function renderCharacters() {
     if (!target) return;
     const search = (document.querySelector('#rolib-character-search')?.value || '').trim().toLowerCase();
     const rows = characters.filter(x => (!activeWork || x.work === activeWork) && (!search || x.name.toLowerCase().includes(search) || x.tag.toLowerCase().includes(search)));
-    target.innerHTML = rows.map((item, i) => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
+    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
     target.querySelectorAll('[data-char-index]').forEach(btn => btn.addEventListener('click', () => chooseCharacter(characters[Number(btn.dataset.charIndex)])));
 }
 
