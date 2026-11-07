@@ -147,7 +147,7 @@ async function chooseCharacter(item) {
     const value = item.tag;
     await setVar(slotKey('role'), value);
     await updateInput();
-    toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}（${item.work}）`);
+    toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}（${item.sourceWork || item.work}）`);
 }
 
 async function chooseOutfit(item) {
@@ -176,13 +176,20 @@ async function renderStatus() {
     box.innerHTML = `<div><b>甲</b>　角色：${esc(roleA || '未选择')}<br>　　服装：${esc(outfitA || '未选择')}</div><div><b>乙</b>　角色：${esc(roleB || '未选择')}<br>　　服装：${esc(outfitB || '未选择')}</div>`;
 }
 
+function matchesCharacter(item, filter = '') {
+    const text = filter.trim().toLowerCase();
+    return !text || [item.name, item.work, item.sourceWork, item.tag]
+        .some(value => String(value || '').toLowerCase().includes(text));
+}
+
 function renderWorks(filter = '') {
     const target = document.querySelector('#rolib-work-list');
     if (!target) return;
     const text = filter.trim().toLowerCase();
-    const works = [...new Set(characters.filter(x => !text || x.work.toLowerCase().includes(text) || x.name.toLowerCase().includes(text)).map(x => x.work))];
+    const works = [...new Set(characters.filter(x => matchesCharacter(x, text)).map(x => x.work))];
     if (works.length && !works.includes(activeWork)) activeWork = works[0];
-    target.innerHTML = works.map(work => `<button class="menu_button rolib-chip${work === activeWork ? ' active' : ''}" data-work="${esc(work)}">${esc(work)}</button>`).join('');
+    const workLabel = work => `${work}（${characters.filter(x => x.work === work).length}）`;
+    target.innerHTML = works.map(work => `<button class="menu_button rolib-chip${work === activeWork ? ' active' : ''}" data-work="${esc(work)}">${esc(workLabel(work))}</button>`).join('');
     target.querySelectorAll('[data-work]').forEach(btn => btn.addEventListener('click', () => {
         activeWork = btn.dataset.work;
         const select = document.querySelector('#rolib-work-select');
@@ -193,7 +200,7 @@ function renderWorks(filter = '') {
     const select = document.querySelector('#rolib-work-select');
     if (select) {
         const allWorks = [...new Set(characters.map(x => x.work))];
-        select.innerHTML = allWorks.map(work => `<option value="${esc(work)}">${esc(work)}</option>`).join('');
+        select.innerHTML = allWorks.map(work => `<option value="${esc(work)}">${esc(workLabel(work))}</option>`).join('');
         if (allWorks.includes(activeWork)) select.value = activeWork;
     }
 }
@@ -202,8 +209,8 @@ function renderCharacters() {
     const target = document.querySelector('#rolib-character-list');
     if (!target) return;
     const search = (document.querySelector('#rolib-character-search')?.value || '').trim().toLowerCase();
-    const rows = characters.filter(x => (!activeWork || x.work === activeWork) && (!search || x.name.toLowerCase().includes(search) || x.tag.toLowerCase().includes(search)));
-    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
+    const rows = characters.filter(x => (!activeWork || x.work === activeWork) && matchesCharacter(x, search));
+    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.sourceWork || item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
     target.querySelectorAll('[data-char-index]').forEach(btn => btn.addEventListener('click', () => chooseCharacter(characters[Number(btn.dataset.charIndex)])));
 }
 
@@ -472,3 +479,4 @@ async function init() {
 jQuery(async () => {
     await init();
 });
+
