@@ -16,6 +16,65 @@ let launcherObserver = null;
 let drawerExpanded = false;
 let launcherEventsBound = false;
 
+const EXTRA_CHARACTERS = [
+    ['胜利女神：妮姬','诺雅尔','noir (nikke)'],
+    ['胜利女神：妮姬','沃伦姆','volume (nikke)'],
+    ['胜利女神：妮姬','诺伊斯','noise (nikke)'],
+    ['胜利女神：妮姬','阿莉亚','aria (nikke)'],
+    ['胜利女神：妮姬','贝伊','bay (nikke)'],
+    ['原神','迪希雅','dehya (genshin impact)'],
+    ['原神','坎蒂丝','candace (genshin impact)'],
+    ['原神','希诺宁','xilonen (genshin impact)'],
+    ['型月系列','凯妮斯','caenis (fate)'],
+    ['罪恶装备','拉姆蕾萨尔','ramlethal valentine'],
+    ['明日方舟','卡涅利安','carnelian (arknights)'],
+    ['棕色尘埃2','内布利斯','nebris (brown dust 2)'],
+];
+const EXTRA_OUTFITS = [
+    ['幻想服饰','暗黑祭司服','dark priestess outfit, black robes, gold trim, ornate collar'],
+    ['幻想服饰','月光舞娘服','belly dancer outfit, sheer veil, gold jewelry, layered skirt'],
+    ['幻想服饰','哥特束腰礼服','gothic dress, corset, lace trim, long gloves'],
+    ['幻想服饰','星象占卜师服','fortune teller outfit, star print, layered shawl, jewelry'],
+    ['幻想服饰','机械修女服','nun outfit, mechanical arms, futuristic armor, black veil'],
+    ['幻想服饰','精灵祭典服','fantasy dress, leaf ornament, sheer sleeves, gold embroidery'],
+    ['幻想服饰','龙鳞战斗服','dragon scale armor, bodysuit, armored boots'],
+    ['幻想服饰','沙漠女王服','desert outfit, gold jewelry, flowing cape, ornate belt'],
+    ['未来科技','赛博机能连体衣','techwear, bodysuit, utility belt, futuristic boots'],
+    ['未来科技','仿生义体战斗服','cybernetic bodysuit, mechanical limbs, armored panels'],
+    ['未来科技','全息偶像演出服','idol costume, holographic fabric, futuristic accessories'],
+    ['未来科技','太空驾驶服','pilot suit, skin tight, harness, gloves'],
+    ['舞台与派对','黑金兔女郎','bunny suit, black leotard, fishnet pantyhose, bunny ears, gold trim'],
+    ['舞台与派对','羽毛歌姬演出服','showgirl outfit, feather boa, sequins, high heels'],
+    ['舞台与派对','假面舞会礼服','masquerade mask, evening gown, opera gloves'],
+    ['舞台与派对','复古爵士舞台服','cabaret outfit, fringed dress, long gloves, feather headpiece'],
+    ['成人风格','皮革束身套装','leather corset, leather skirt, thighhighs'],
+    ['成人风格','蕾丝吊带睡衣','lace camisole, lace trim, silk nightgown'],
+    ['成人风格','镂空紧身连体衣','cutout bodysuit, highleg leotard, thighhighs'],
+    ['成人风格','半透明罩衫','sheer robe, lingerie, lace trim'],
+    ['成人风格','漆皮舞台服','latex bodysuit, glossy clothes, thighhigh boots'],
+    ['成人风格','缎面吊带套装','satin camisole, short shorts, lace trim'],
+    ['成人风格','哥特蕾丝内衣','black lingerie, gothic lace, garter straps'],
+    ['成人风格','皮革绑带舞台装','strappy outfit, leather harness, bodysuit'],
+];
+
+function addSupplementalLibrary() {
+    const existingCharacters = new Set(characters.map(x => x.tag.toLowerCase()));
+    for (const [work, name, tag] of EXTRA_CHARACTERS) {
+        if (!existingCharacters.has(tag.toLowerCase())) {
+            characters.push({ work, sourceWork: work, name, tag });
+            existingCharacters.add(tag.toLowerCase());
+        }
+    }
+    const existingOutfits = new Set(outfits.map(x => x.name));
+    for (const [group, name, tag] of EXTRA_OUTFITS) {
+        if (!existingOutfits.has(name)) {
+            outfits.push({ group, name, tag });
+            existingOutfits.add(name);
+        }
+    }
+}
+
+
 const USAGE_KEY = 'rolib-character-usage-v1';
 let usageCounts = loadUsageCounts();
 
@@ -139,6 +198,7 @@ async function loadBundledLibrary() {
         const data = await decryptLibrary(BUNDLED_LIBRARY_KEY);
         characters = data.characters;
         outfits = data.outfits;
+        addSupplementalLibrary();
         renderWorks();
         renderCharacters();
         renderOutfitGroups();
