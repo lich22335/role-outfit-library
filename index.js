@@ -16,6 +16,79 @@ let launcherObserver = null;
 let drawerExpanded = false;
 let launcherEventsBound = false;
 
+const USAGE_KEY = 'rolib-character-usage-v1';
+let usageCounts = loadUsageCounts();
+
+function loadUsageCounts() {
+    try {
+        const data = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+        return Object.fromEntries(Object.entries(data).filter(([key, count]) =>
+            key && Number.isSafeInteger(count) && count >= 0));
+    } catch (error) {
+        console.warn('无法读取角色使用记录', error);
+        return {};
+    }
+}
+
+function usageKey(item) {
+    return JSON.stringify([item.work, item.tag]);
+}
+
+function usageCount(item) {
+    return usageCounts[usageKey(item)] || 0;
+}
+
+function recordUsage(item) {
+    const key = usageKey(item);
+    const updated = { ...usageCounts, [key]: usageCount(item) + 1 };
+    try {
+        localStorage.setItem(USAGE_KEY, JSON.stringify(updated));
+        usageCounts = updated;
+        renderCharacters();
+    } catch (error) {
+        console.error('角色使用次数保存失败', error);
+        toastr.error('角色已选择，但使用次数保存失败');
+    }
+}
+
+function exportUsage() {
+    const records = characters.filter(item => usageCount(item) > 0)
+        .map(item => ({ work: item.work, name: item.name, tag: item.tag, count: usageCount(item) }))
+        .sort((a, b) => b.count - a.count);
+    const payload = { format: USAGE_KEY, exportedAt: new Date().toISOString(), records };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '角色使用记录-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function importUsage(file) {
+    if (!file) return;
+    try {
+        const data = JSON.parse(await file.text());
+        if (data?.format !== USAGE_KEY || !Array.isArray(data.records)) throw new Error('不是本插件的记录文件');
+        const updated = { ...usageCounts };
+        for (const record of data.records) {
+            if (typeof record.work !== 'string' || typeof record.tag !== 'string' ||
+                !Number.isSafeInteger(record.count) || record.count < 0) throw new Error('记录内容不正确');
+            const key = JSON.stringify([record.work, record.tag]);
+            updated[key] = Math.max(updated[key] || 0, record.count);
+        }
+        localStorage.setItem(USAGE_KEY, JSON.stringify(updated));
+        usageCounts = updated;
+        renderCharacters();
+        toastr.success('使用记录已导入，同一角色保留较大的次数');
+    } catch (error) {
+        toastr.error('导入失败：' + error.message);
+    }
+}
+
+
 function esc(value = '') {
     return String(value).replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
 }
@@ -147,6 +220,7 @@ async function chooseCharacter(item) {
     const value = item.tag;
     await setVar(slotKey('role'), value);
     await updateInput();
+    recordUsage(item);
     toastr.success(`${activeSlot === 'A' ? '甲' : '乙'}槽角色：${item.name}（${item.sourceWork || item.work}）`);
 }
 
@@ -210,7 +284,8 @@ function renderCharacters() {
     if (!target) return;
     const search = (document.querySelector('#rolib-character-search')?.value || '').trim().toLowerCase();
     const rows = characters.filter(x => (!activeWork || x.work === activeWork) && matchesCharacter(x, search));
-    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.sourceWork || item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
+    if (document.querySelector("#rolib-sort-usage")?.checked) rows.sort((a, b) => usageCount(b) - usageCount(a));
+    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)} · 已使用 ${usageCount(item)} 次</span><small>${esc(item.sourceWork || item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
     target.querySelectorAll('[data-char-index]').forEach(btn => btn.addEventListener('click', () => chooseCharacter(characters[Number(btn.dataset.charIndex)])));
 }
 
@@ -273,6 +348,13 @@ function bindUi() {
         renderCharacters();
     });
     document.querySelector('#rolib-outfit-search')?.addEventListener('input', renderOutfits);
+    document.querySelector('#rolib-sort-usage')?.addEventListener('change', renderCharacters);
+    document.querySelector('#rolib-export-usage')?.addEventListener('click', exportUsage);
+    document.querySelector('#rolib-import-usage')?.addEventListener('click', () => document.querySelector('#rolib-import-usage-file')?.click());
+    document.querySelector('#rolib-import-usage-file')?.addEventListener('change', async event => {
+        await importUsage(event.target.files?.[0]);
+        event.target.value = '';
+    });
     document.querySelector('#rolib-work-select')?.addEventListener('change', event => {
         activeWork = event.target.value;
         renderWorks(document.querySelector('#rolib-character-search')?.value || '');
