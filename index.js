@@ -284,8 +284,7 @@ function renderCharacters() {
     if (!target) return;
     const search = (document.querySelector('#rolib-character-search')?.value || '').trim().toLowerCase();
     const rows = characters.filter(x => (!activeWork || x.work === activeWork) && matchesCharacter(x, search));
-    if (document.querySelector("#rolib-sort-usage")?.checked) rows.sort((a, b) => usageCount(b) - usageCount(a));
-    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)} · 已使用 ${usageCount(item)} 次</span><small>${esc(item.sourceWork || item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
+    target.innerHTML = rows.map(item => `<button class="menu_button rolib-item" data-char-index="${characters.indexOf(item)}"><span>${esc(item.name)}</span><small>${esc(item.sourceWork || item.work)} · ${esc(item.tag)}</small></button>`).join('') || '<div class="rolib-empty">没有匹配角色</div>';
     target.querySelectorAll('[data-char-index]').forEach(btn => btn.addEventListener('click', () => chooseCharacter(characters[Number(btn.dataset.charIndex)])));
 }
 
@@ -348,13 +347,6 @@ function bindUi() {
         renderCharacters();
     });
     document.querySelector('#rolib-outfit-search')?.addEventListener('input', renderOutfits);
-    document.querySelector('#rolib-sort-usage')?.addEventListener('change', renderCharacters);
-    document.querySelector('#rolib-export-usage')?.addEventListener('click', exportUsage);
-    document.querySelector('#rolib-import-usage')?.addEventListener('click', () => document.querySelector('#rolib-import-usage-file')?.click());
-    document.querySelector('#rolib-import-usage-file')?.addEventListener('change', async event => {
-        await importUsage(event.target.files?.[0]);
-        event.target.value = '';
-    });
     document.querySelector('#rolib-work-select')?.addEventListener('change', event => {
         activeWork = event.target.value;
         renderWorks(document.querySelector('#rolib-character-search')?.value || '');
@@ -531,6 +523,14 @@ function closeLibraryPopup() {
     document.body.classList.remove('rolib-popup-open');
     syncFloatingLauncher();
 }
+
+// Background-only backup access; no controls appear in the character picker.
+// In browser console: rolibUsage.export() / rolibUsage.import(file)
+globalThis.rolibUsage = {
+    export: exportUsage,
+    import: importUsage,
+    getCounts: () => ({ ...usageCounts }),
+};
 
 async function init() {
     try {
